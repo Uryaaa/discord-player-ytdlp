@@ -1,6 +1,6 @@
 {
   "name": "discord-player-ytdlp",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Discord Player extractor that utilizing yt-dlp",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -38,12 +38,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/yourusername/discord-player-ytdlp.git"
+    "url": "git+https://github.com/Uryaaa/discord-player-ytdlp.git"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/discord-player-ytdlp/issues"
+    "url": "https://github.com/Uryaaa/discord-player-ytdlp/issues"
   },
-  "homepage": "https://github.com/yourusername/discord-player-ytdlp#readme",
+  "homepage": "https://github.com/Uryaaa/discord-player-ytdlp#readme",
   "peerDependencies": {
     "discord-player": "^7.0.0"
   },
