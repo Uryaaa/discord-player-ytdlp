@@ -1,6 +1,6 @@
 /**
  * YtDlp-Youtubei Hybrid Extractor
- * Combines youtubei.js for YouTube search/metadata with yt-dlp for streaming
+ * Uses yt-dlp for consistent metadata and streaming, with youtubei.js for search/playlists
  * Supports both YouTube search queries and direct URLs from various sites
  */
 
@@ -14,12 +14,12 @@ const {
     searchYouTube,
     getYouTubePlaylist,
     getYouTubeMetadata,
+    getYouTubeMetadataWithYtDlp,
     getRelatedTracks,
     getStreamingUrl,
     getBasicInfo,
     canExtract,
-    validateUrl,
-    createTrackObject
+    validateUrl
 } = require('./utils');
 
 class YtDlpExtractor extends BaseExtractor {
@@ -148,7 +148,18 @@ class YtDlpExtractor extends BaseExtractor {
                     throw new Error('Could not extract YouTube video ID');
                 }
 
-                const trackInfo = await getYouTubeMetadata(videoId, this.youtubeiOptions);
+                // Use yt-dlp for YouTube metadata for consistency, with youtubei.js as fallback
+                let trackInfo;
+                try {
+                    // Pass cookies to yt-dlp if available
+                    const cookies = this.youtubeiOptions?.cookies || null;
+                    trackInfo = await getYouTubeMetadataWithYtDlp(videoId, this.ytdlpPath, cookies);
+                } catch (ytdlpError) {
+                    this.debug(`yt-dlp metadata failed, falling back to youtubei.js: ${ytdlpError.message}`);
+                    // Fallback to youtubei.js
+                    trackInfo = await getYouTubeMetadata(videoId, this.youtubeiOptions);
+                }
+
                 if (!trackInfo) {
                     throw new Error('Could not get YouTube metadata');
                 }

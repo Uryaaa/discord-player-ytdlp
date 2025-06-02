@@ -474,6 +474,81 @@ const getStreamingUrl = async (url, ytdlpPath, quality = 'bestaudio[ext=m4a]/bes
 };
 
 /**
+ * Get YouTube metadata using yt-dlp for consistency
+ */
+const getYouTubeMetadataWithYtDlp = async (videoId, ytdlpPath, cookies = null) => {
+    try {
+        if (!fs.existsSync(ytdlpPath)) {
+            throw new Error(`yt-dlp binary not found at: ${ytdlpPath}`);
+        }
+
+        const url = `https://www.youtube.com/watch?v=${videoId}`;
+
+        // Build command arguments
+        const args = [
+            '-J',
+            '--no-playlist',
+            '--no-warnings',
+            '--no-check-certificates',
+            '--socket-timeout', '10',
+            '--retries', '2'
+        ];
+
+        // Add cookies if provided
+        if (cookies) {
+            const tempCookiesFile = path.join(__dirname, 'temp_cookies_metadata.txt');
+            try {
+                // Convert cookies to Netscape format if needed
+                const netscapeCookies = convertToNetscapeFormat(cookies);
+                fs.writeFileSync(tempCookiesFile, netscapeCookies);
+                args.push('--cookies', tempCookiesFile);
+            } catch (cookieError) {
+                console.warn('Failed to write cookies for metadata, continuing without:', cookieError.message);
+            }
+        }
+
+        const command = `"${ytdlpPath}" ${args.join(' ')} "${url}"`;
+
+        const { stdout, stderr } = await execAsync(command, {
+            timeout: 15000,
+            maxBuffer: 1024 * 1024
+        });
+
+        // Clean up temporary cookies file
+        if (cookies) {
+            const tempCookiesFile = path.join(__dirname, 'temp_cookies_metadata.txt');
+            try {
+                if (fs.existsSync(tempCookiesFile)) {
+                    fs.unlinkSync(tempCookiesFile);
+                }
+            } catch (cleanupError) {
+                // Ignore cleanup errors
+            }
+        }
+
+        if (stderr && !stdout) {
+            throw new Error(`yt-dlp metadata error: ${stderr}`);
+        }
+
+        const info = JSON.parse(stdout);
+
+        return {
+            id: videoId,
+            title: info.title || info.fulltitle || 'Unknown Title',
+            duration: info.duration ? formatDuration(info.duration) : 'Unknown',
+            thumbnail: info.thumbnail || null,
+            url: `https://www.youtube.com/watch?v=${videoId}`,
+            author: info.uploader || info.channel || 'Unknown Artist',
+            views: info.view_count || 0,
+            description: info.description || ''
+        };
+    } catch (error) {
+        console.error('yt-dlp YouTube metadata error:', error);
+        throw error;
+    }
+};
+
+/**
  * Get basic info using yt-dlp (fallback for non-YouTube sites)
  */
 const getBasicInfo = async (url, ytdlpPath) => {
@@ -629,6 +704,7 @@ module.exports = {
     searchYouTube,
     getYouTubePlaylist,
     getYouTubeMetadata,
+    getYouTubeMetadataWithYtDlp,
     getRelatedTracks,
     getStreamingUrl,
     getBasicInfo,
