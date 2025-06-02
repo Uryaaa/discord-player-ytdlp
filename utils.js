@@ -442,7 +442,8 @@ const getStreamingUrl = async (url, ytdlpPath, quality = 'bestaudio[ext=m4a]/bes
         const { stdout, stderr } = await execAsync(command, {
             timeout: 15000, // Reduced timeout for faster response
             maxBuffer: 1024 * 1024, // 1MB buffer should be enough for URL
-            encoding: 'utf8'
+            encoding: 'utf8',
+            windowsHide: true // Hide console window on Windows
         });
 
         // Clean up temporary cookies file
@@ -511,7 +512,8 @@ const getYouTubeMetadataWithYtDlp = async (videoId, ytdlpPath, cookies = null) =
 
         const { stdout, stderr } = await execAsync(command, {
             timeout: 15000,
-            maxBuffer: 1024 * 1024
+            maxBuffer: 1024 * 1024,
+            windowsHide: true // Hide console window on Windows
         });
 
         // Clean up temporary cookies file
@@ -560,7 +562,8 @@ const getBasicInfo = async (url, ytdlpPath) => {
         const command = `"${ytdlpPath}" -J --flat-playlist --no-warnings "${url}"`;
         const { stdout, stderr } = await execAsync(command, {
             timeout: 15000, // Reduced timeout
-            maxBuffer: 1024 * 1024 // 1MB buffer
+            maxBuffer: 1024 * 1024, // 1MB buffer
+            windowsHide: true // Hide console window on Windows
         });
 
         if (stderr && !stdout) {
@@ -611,7 +614,10 @@ const canExtract = async (url, ytdlpPath) => {
         }
 
         const command = `"${ytdlpPath}" --simulate --quiet "${url}"`;
-        await execAsync(command, { timeout: 10000 });
+        await execAsync(command, {
+            timeout: 10000,
+            windowsHide: true // Hide console window on Windows
+        });
         return true;
     } catch (error) {
         return false;
