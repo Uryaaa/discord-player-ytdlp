@@ -1,0 +1,61 @@
+{
+  "name": "discord-player-ytdlp",
+  "version": "1.0.0",
+  "description": "Discord Player extractor that utilizing yt-dlp",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "build:watch": "tsup --watch",
+    "prepublishOnly": "npm run build",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "discord",
+    "discord-player",
+    "extractor",
+    "youtube",
+    "yt-dlp",
+    "music",
+    "audio",
+    "streaming",
+    "youtubei"
+  ],
+  "author": "Tama-chan",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yourusername/discord-player-ytdlp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/discord-player-ytdlp/issues"
+  },
+  "homepage": "https://github.com/yourusername/discord-player-ytdlp#readme",
+  "peerDependencies": {
+    "discord-player": "^7.0.0"
+  },
+  "dependencies": {
+    "youtubei.js": "^13.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

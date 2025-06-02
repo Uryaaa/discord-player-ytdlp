@@ -1,0 +1,41 @@
+# Source files (only include built dist)
+index.js
+utils.js
+tsup.config.ts
+
+# Development files
+.gitignore
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment variables
+.env*
+
+# Temporary files
+temp_cookies.txt
+*.tmp
+*.temp
+
+# Logs
+logs/
+*.log
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Tests
+test/
+tests/
+__tests__/
+*.test.js
+*.spec.js
+
+# Development dependencies
+node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db
