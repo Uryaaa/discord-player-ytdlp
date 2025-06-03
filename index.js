@@ -2,6 +2,14 @@
  * YtDlp-Youtubei Hybrid Extractor
  * Uses yt-dlp for consistent metadata and streaming, with youtubei.js for search/playlists
  * Supports both YouTube search queries and direct URLs from various sites
+ *
+ * Options:
+ * - preferYtdlpMetadata: boolean (default: true) - Whether to prefer yt-dlp for YouTube metadata
+ * - ytdlpPath: string - Path to yt-dlp binary
+ * - streamQuality: string - Quality selector for streaming
+ * - enableYouTubeSearch: boolean (default: true) - Enable YouTube search functionality
+ * - enableDirectUrls: boolean (default: true) - Enable direct URL handling
+ * - youtubeiOptions: object - Options for youtubei.js (cookies, client)
  */
 
 const { BaseExtractor, Track, Playlist } = require('discord-player');
@@ -34,6 +42,7 @@ class YtDlpExtractor extends BaseExtractor {
         this.enableYouTubeSearch = options.enableYouTubeSearch !== false;
         this.enableDirectUrls = options.enableDirectUrls !== false;
         this.streamQuality = options.streamQuality || 'bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio';
+        this.preferYtdlpMetadata = options.preferYtdlpMetadata !== false; // Default to true for consistency
 
         // YouTubei options
         this.youtubeiOptions = {
@@ -148,21 +157,68 @@ class YtDlpExtractor extends BaseExtractor {
                     throw new Error('Could not extract YouTube video ID');
                 }
 
-                // Use yt-dlp for YouTube metadata for consistency, with youtubei.js as fallback
+                // Get YouTube metadata with configurable preference and fallback
                 let trackInfo;
-                try {
-                    // Pass cookies to yt-dlp if available
-                    const cookies = this.youtubeiOptions?.cookies || null;
-                    trackInfo = await getYouTubeMetadataWithYtDlp(videoId, this.ytdlpPath, cookies);
-                } catch (ytdlpError) {
-                    this.debug(`yt-dlp metadata failed, falling back to youtubei.js: ${ytdlpError.message}`);
-                    // Fallback to youtubei.js
-                    trackInfo = await getYouTubeMetadata(videoId, this.youtubeiOptions);
+                let metadataSource;
+
+                if (this.preferYtdlpMetadata) {
+                    // Try yt-dlp first, fallback to youtubei.js
+                    metadataSource = 'yt-dlp';
+                    try {
+                        const cookies = this.youtubeiOptions?.cookies || null;
+                        this.debug(`Attempting to get metadata using yt-dlp for video: ${videoId}`);
+                        trackInfo = await getYouTubeMetadataWithYtDlp(videoId, this.ytdlpPath, cookies);
+                        this.debug(`Successfully got metadata using yt-dlp`);
+                    } catch (ytdlpError) {
+                        this.debug(`yt-dlp metadata failed: ${ytdlpError.message}`);
+                        this.debug(`Falling back to youtubei.js for metadata`);
+                        metadataSource = 'youtubei.js';
+
+                        try {
+                            trackInfo = await getYouTubeMetadata(videoId, this.youtubeiOptions);
+                            if (trackInfo) {
+                                this.debug(`Successfully got metadata using youtubei.js fallback`);
+                            }
+                        } catch (youtubeiError) {
+                            this.debug(`youtubei.js metadata also failed: ${youtubeiError.message}`);
+                            trackInfo = null;
+                        }
+                    }
+                } else {
+                    // Try youtubei.js first, fallback to yt-dlp
+                    metadataSource = 'youtubei.js';
+                    try {
+                        this.debug(`Attempting to get metadata using youtubei.js for video: ${videoId}`);
+                        trackInfo = await getYouTubeMetadata(videoId, this.youtubeiOptions);
+                        if (trackInfo) {
+                            this.debug(`Successfully got metadata using youtubei.js`);
+                        } else {
+                            throw new Error('youtubei.js returned null');
+                        }
+                    } catch (youtubeiError) {
+                        this.debug(`youtubei.js metadata failed: ${youtubeiError.message}`);
+                        this.debug(`Falling back to yt-dlp for metadata`);
+                        metadataSource = 'yt-dlp';
+
+                        try {
+                            const cookies = this.youtubeiOptions?.cookies || null;
+                            trackInfo = await getYouTubeMetadataWithYtDlp(videoId, this.ytdlpPath, cookies);
+                            if (trackInfo) {
+                                this.debug(`Successfully got metadata using yt-dlp fallback`);
+                            }
+                        } catch (ytdlpError) {
+                            this.debug(`yt-dlp metadata also failed: ${ytdlpError.message}`);
+                            trackInfo = null;
+                        }
+                    }
                 }
 
                 if (!trackInfo) {
-                    throw new Error('Could not get YouTube metadata');
+                    throw new Error('Could not get YouTube metadata from either yt-dlp or youtubei.js');
                 }
+
+                // Add metadata source info to raw data
+                trackInfo.metadataSource = metadataSource;
 
                 const track = new Track(this, {
                     title: trackInfo.title,

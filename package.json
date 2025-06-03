@@ -1,6 +1,6 @@
 {
   "name": "discord-player-ytdlp",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Discord Player extractor that utilizing yt-dlp",
   "main": "dist/index.js",
   "module": "dist/index.mjs",

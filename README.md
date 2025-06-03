@@ -36,6 +36,7 @@ await player.extractors.register(YtDlpExtractor, {
     priority: 100,
     enableYouTubeSearch: true,
     enableDirectUrls: true,
+    preferYtdlpMetadata: true, // Use yt-dlp for YouTube metadata (default: true)
     streamQuality: 'bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio',
     youtubeiOptions: {
         cookies: process.env.YOUTUBE_COOKIES, // Optional: YouTube cookies
@@ -52,6 +53,7 @@ await player.extractors.register(YtDlpExtractor, {
 | `priority` | `number` | `100` | Priority of this extractor |
 | `enableYouTubeSearch` | `boolean` | `true` | Enable YouTube search functionality |
 | `enableDirectUrls` | `boolean` | `true` | Enable direct URL extraction |
+| `preferYtdlpMetadata` | `boolean` | `true` | Prefer yt-dlp for YouTube metadata over youtubei.js |
 | `streamQuality` | `string` | `'bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio'` | Stream quality format for yt-dlp |
 | `youtubeiOptions.cookies` | `string\|object` | `null` | YouTube cookies for authentication |
 | `youtubeiOptions.client` | `string` | `null` | YouTube client configuration |
@@ -59,6 +61,25 @@ await player.extractors.register(YtDlpExtractor, {
 ## Supported Sites
 
 [Check here for a list of supported sites](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md)
+
+## Metadata Strategy
+
+The extractor supports two metadata sources for YouTube videos:
+
+- **yt-dlp** (default): More consistent with streaming, better for reliability
+- **youtubei.js**: Faster, better for duration parsing, uses YouTube's internal API
+
+You can control this with the `preferYtdlpMetadata` option:
+
+```javascript
+// Use yt-dlp for metadata (default - more consistent)
+preferYtdlpMetadata: true
+
+// Use youtubei.js for metadata (faster, better duration handling)
+preferYtdlpMetadata: false
+```
+
+Both options include automatic fallback to the other method if the preferred one fails.
 
 ## YouTube Cookies
 
@@ -100,6 +121,7 @@ await player.play(voiceChannel, 'https://www.youtube.com/playlist?list=PLrAXtmRd
 await player.extractors.register(YtDlpExtractor, {
     ytdlpPath: './bin/yt-dlp.exe',
     priority: 150, // Higher priority
+    preferYtdlpMetadata: false, // Prefer youtubei.js for metadata
     streamQuality: 'bestaudio[ext=webm]/bestaudio', // Prefer WebM
     youtubeiOptions: {
         cookies: process.env.YOUTUBE_COOKIES,

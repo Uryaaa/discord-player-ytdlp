@@ -347,11 +347,42 @@ const getYouTubeMetadata = async (videoId, options = {}) => {
             throw new Error('Video not found');
         }
 
+        // Better duration handling - try multiple sources
+        let duration = 'Unknown';
+        if (info.basic_info?.duration) {
+            if (typeof info.basic_info.duration === 'object') {
+                // If duration is an object with seconds property
+                if (info.basic_info.duration.seconds) {
+                    duration = formatDuration(info.basic_info.duration.seconds);
+                } else if (info.basic_info.duration.text) {
+                    duration = info.basic_info.duration.text;
+                }
+            } else if (typeof info.basic_info.duration === 'number') {
+                // If duration is a number (seconds)
+                duration = formatDuration(info.basic_info.duration);
+            } else if (typeof info.basic_info.duration === 'string') {
+                // If duration is already a string
+                duration = info.basic_info.duration;
+            }
+        }
+
+        // Better thumbnail handling
+        let thumbnail = null;
+        if (info.basic_info?.thumbnail) {
+            if (Array.isArray(info.basic_info.thumbnail) && info.basic_info.thumbnail.length > 0) {
+                // Get the highest quality thumbnail
+                const thumbnails = info.basic_info.thumbnail;
+                thumbnail = thumbnails[thumbnails.length - 1]?.url || thumbnails[0]?.url;
+            } else if (typeof info.basic_info.thumbnail === 'string') {
+                thumbnail = info.basic_info.thumbnail;
+            }
+        }
+
         return {
             id: videoId,
             title: info.basic_info?.title || 'Unknown Title',
-            duration: info.basic_info?.duration?.text || 'Unknown',
-            thumbnail: info.basic_info?.thumbnail?.[0]?.url || null,
+            duration: duration,
+            thumbnail: thumbnail,
             url: `https://www.youtube.com/watch?v=${videoId}`,
             author: info.basic_info?.author || 'Unknown Artist',
             views: info.basic_info?.view_count || 0,
@@ -478,6 +509,8 @@ const getStreamingUrl = async (url, ytdlpPath, quality = 'bestaudio[ext=m4a]/bes
  * Get YouTube metadata using yt-dlp for consistency
  */
 const getYouTubeMetadataWithYtDlp = async (videoId, ytdlpPath, cookies = null) => {
+    let tempCookiesFile = null;
+
     try {
         if (!fs.existsSync(ytdlpPath)) {
             throw new Error(`yt-dlp binary not found at: ${ytdlpPath}`);
@@ -485,19 +518,24 @@ const getYouTubeMetadataWithYtDlp = async (videoId, ytdlpPath, cookies = null) =
 
         const url = `https://www.youtube.com/watch?v=${videoId}`;
 
-        // Build command arguments
+        // Optimized command arguments for faster metadata extraction
         const args = [
             '-J',
             '--no-playlist',
             '--no-warnings',
             '--no-check-certificates',
-            '--socket-timeout', '10',
-            '--retries', '2'
+            '--skip-download',
+            '--no-call-home',
+            '--no-cache-dir',
+            '--socket-timeout', '15',
+            '--retries', '1',
+            '--fragment-retries', '1',
+            '--extractor-retries', '1'
         ];
 
         // Add cookies if provided
         if (cookies) {
-            const tempCookiesFile = path.join(__dirname, 'temp_cookies_metadata.txt');
+            tempCookiesFile = path.join(__dirname, `temp_cookies_metadata_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.txt`);
             try {
                 // Convert cookies to Netscape format if needed
                 const netscapeCookies = convertToNetscapeFormat(cookies);
@@ -505,20 +543,55 @@ const getYouTubeMetadataWithYtDlp = async (videoId, ytdlpPath, cookies = null) =
                 args.push('--cookies', tempCookiesFile);
             } catch (cookieError) {
                 console.warn('Failed to write cookies for metadata, continuing without:', cookieError.message);
+                tempCookiesFile = null;
             }
         }
 
         const command = `"${ytdlpPath}" ${args.join(' ')} "${url}"`;
 
         const { stdout, stderr } = await execAsync(command, {
-            timeout: 15000,
-            maxBuffer: 1024 * 1024,
-            windowsHide: true // Hide console window on Windows
+            timeout: 30000, // Increased timeout to 30 seconds
+            maxBuffer: 2 * 1024 * 1024, // Increased buffer to 2MB
+            windowsHide: true, // Hide console window on Windows
+            killSignal: 'SIGKILL' // Use SIGKILL instead of SIGTERM for more reliable termination
         });
 
+        if (stderr && !stdout) {
+            throw new Error(`yt-dlp metadata error: ${stderr}`);
+        }
+
+        if (!stdout || stdout.trim() === '') {
+            throw new Error('yt-dlp returned empty response');
+        }
+
+        let info;
+        try {
+            info = JSON.parse(stdout);
+        } catch (parseError) {
+            throw new Error(`Failed to parse yt-dlp JSON response: ${parseError.message}`);
+        }
+
+        // Validate essential fields
+        if (!info.id && !info.display_id) {
+            throw new Error('Invalid video data: missing video ID');
+        }
+
+        return {
+            id: videoId,
+            title: info.title || info.fulltitle || 'Unknown Title',
+            duration: info.duration ? formatDuration(info.duration) : 'Unknown',
+            thumbnail: info.thumbnail || (info.thumbnails && info.thumbnails[0] ? info.thumbnails[0].url : null),
+            url: `https://www.youtube.com/watch?v=${videoId}`,
+            author: info.uploader || info.channel || info.uploader_id || 'Unknown Artist',
+            views: info.view_count || 0,
+            description: info.description || ''
+        };
+    } catch (error) {
+        console.error('yt-dlp YouTube metadata error:', error);
+        throw error;
+    } finally {
         // Clean up temporary cookies file
-        if (cookies) {
-            const tempCookiesFile = path.join(__dirname, 'temp_cookies_metadata.txt');
+        if (tempCookiesFile) {
             try {
                 if (fs.existsSync(tempCookiesFile)) {
                     fs.unlinkSync(tempCookiesFile);
@@ -527,26 +600,6 @@ const getYouTubeMetadataWithYtDlp = async (videoId, ytdlpPath, cookies = null) =
                 // Ignore cleanup errors
             }
         }
-
-        if (stderr && !stdout) {
-            throw new Error(`yt-dlp metadata error: ${stderr}`);
-        }
-
-        const info = JSON.parse(stdout);
-
-        return {
-            id: videoId,
-            title: info.title || info.fulltitle || 'Unknown Title',
-            duration: info.duration ? formatDuration(info.duration) : 'Unknown',
-            thumbnail: info.thumbnail || null,
-            url: `https://www.youtube.com/watch?v=${videoId}`,
-            author: info.uploader || info.channel || 'Unknown Artist',
-            views: info.view_count || 0,
-            description: info.description || ''
-        };
-    } catch (error) {
-        console.error('yt-dlp YouTube metadata error:', error);
-        throw error;
     }
 };
 
