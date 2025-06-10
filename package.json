@@ -1,6 +1,6 @@
 {
   "name": "discord-player-ytdlp",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Discord Player extractor that utilizing yt-dlp",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -48,7 +48,7 @@
     "discord-player": "^7.0.0"
   },
   "dependencies": {
-    "youtubei.js": "^13.4.0"
+    "youtubei.js": "^14.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
@@ -56,6 +56,6 @@
     "typescript": "^5.0.0"
   },
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=20.0.0"
   }
 }
