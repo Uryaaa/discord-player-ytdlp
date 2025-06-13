@@ -4,10 +4,10 @@ A discord-player extractor that utilizing yt-dlp for streaming audio from variou
 
 ## Features
 
-- **YouTube Search**: Uses youtubei.js for fast and reliable YouTube search
+- **YouTube Search**: Uses [youtubei.js](https://github.com/LuanRT/YouTube.js) for searching YouTube videos
 - **Multi-site Support**: Stream audio from any site [yt-dlp](https://github.com/yt-dlp/yt-dlp) can handle
-- **Playlist Support**: Handles YouTube playlists including Mix playlists
-- **Autoplay**: Provides related tracks for autoplay functionality
+- **Playlist Support**: Handles YouTube playlists including private playlist (require cookies)
+- **Autoplay**: Provides related tracks using [youtubei.js](https://github.com/LuanRT/YouTube.js) for YouTube tracks
 - **Cookie Support**: Supports Youtube cookies for video with restrictions
 
 ## Installation
@@ -18,9 +18,9 @@ npm install discord-player-ytdlp
 
 ## Requirements
 
-- Node.js 16 or higher
-- discord-player v7.0.0 or higher
-- yt-dlp binary (you need to provide the path to the binary)
+- [Node.js](https://nodejs.org/) 20 or higher
+- [discord-player](https://github.com/Androz2091/discord-player) v7.0.0 or higher
+- [yt-dlp](https://github.com/yt-dlp/yt-dlp) binary (you need to provide the path to the binary)
 
 ## Usage
 
@@ -32,16 +32,8 @@ const player = new Player(client);
 
 // Register the extractor
 await player.extractors.register(YtDlpExtractor, {
-    ytdlpPath: './bin/yt-dlp.exe', // Path to your yt-dlp binary
-    priority: 100,
-    enableYouTubeSearch: true,
-    enableDirectUrls: true,
-    preferYtdlpMetadata: true, // Use yt-dlp for YouTube metadata (default: true)
-    streamQuality: 'bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio',
-    youtubeiOptions: {
-        cookies: process.env.YOUTUBE_COOKIES, // Optional: YouTube cookies
-        client: 'WEB' // Optional: YouTube client
-    }
+    ytdlpPath: './bin/yt-dlp.exe', // Path to your yt-dlp binary (required)
+    // Other options...
 });
 ```
 
@@ -62,20 +54,20 @@ await player.extractors.register(YtDlpExtractor, {
 
 [Check here for a list of supported sites](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md)
 
-## Metadata Strategy
+## Youtube Metadata Strategy
 
 The extractor supports two metadata sources for YouTube videos:
 
-- **yt-dlp** (default): More consistent with streaming, better for reliability
-- **youtubei.js**: Faster, better for duration parsing, uses YouTube's internal API
+- **yt-dlp** (default): More consistent with streaming source
+- **youtubei.js**: Uses YouTube's internal API (Fallback when yt-dlp fails)
 
 You can control this with the `preferYtdlpMetadata` option:
 
 ```javascript
-// Use yt-dlp for metadata (default - more consistent)
+// Use yt-dlp for metadata (default)
 preferYtdlpMetadata: true
 
-// Use youtubei.js for metadata (faster, better duration handling)
+// Use youtubei.js for metadata
 preferYtdlpMetadata: false
 ```
 
@@ -90,7 +82,7 @@ To access private YouTube content or improve reliability, you can provide YouTub
 
 ```javascript
 youtubeiOptions: {
-    cookies: 'your_cookies_string_here'
+    cookies: 'cookie1; cookie2; cookie3; ...'
 }
 ```
 
@@ -137,3 +129,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## Supporting
 
 Star and pull request to the repo!
+
+##  Streaming content from YouTube
+
+Streaming content from YouTube is against [YouTube's terms of service](https://www.youtube.com/static?template=terms). Use this at your own risk and responsibility :).
